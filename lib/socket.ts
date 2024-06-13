@@ -24,7 +24,8 @@ export const subscribeToChat = (
 		msgObj: { message: string; date: string }
 	) => void,
 	onOffline: () => void,
-	onOnline: () => void
+	onOnline: () => void,
+	onTyping: () => void
 ) => {
 	if (!socket) return true;
 	socket.on("MESSAGE", (msgObj) => {
@@ -39,6 +40,10 @@ export const subscribeToChat = (
 		console.log("Recipient is online");
 		return onOnline();
 	});
+	socket.on("TYPING", () => {
+		console.log("Recipient is typing");
+		return onTyping();
+	});
 };
 
 export const unsubscribeFromChat = () => {
@@ -52,4 +57,9 @@ export const sendMessage = (
 ) => {
 	if (!sender || !chatId) return;
 	if (socket) socket.emit("SEND_MESSAGE", { chatId, sender, message });
+};
+
+export const sendTyping = (chatId: string | null, sender: string | null) => {
+	if (!sender || !chatId) return;
+	if (socket) socket.emit("TYPING", { chatId, sender });
 };

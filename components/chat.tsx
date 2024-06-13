@@ -10,7 +10,12 @@ import { AvatarImage, AvatarFallback, Avatar } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import ChooseUserModal from "./chooseUserModal";
 import { io } from "socket.io-client";
-import { initiateSocket, subscribeToChat, sendMessage } from "@/lib/socket";
+import {
+	initiateSocket,
+	subscribeToChat,
+	sendMessage,
+	sendTyping,
+} from "@/lib/socket";
 
 interface ChatProps {
 	className?: string;
@@ -27,6 +32,7 @@ export function Chat() {
 	const [recipient, setRecipient] = useState<string | null>(null);
 	const [showModal, setShowModal] = useState(true);
 	const [chatId, setChatId] = useState<string | null>(null);
+	const [isTyping, setIsTyping] = useState<boolean>(false);
 
 	const handleSubmit = () => {
 		sendMessage(chatId, user, message);
@@ -83,6 +89,24 @@ export function Chat() {
 	}, [user]);
 
 	useEffect(() => {
+		const timeout = setTimeout(() => {
+			setIsTyping(false);
+		}, 3000);
+
+		return () => clearTimeout(timeout);
+	}, [isTyping]);
+
+	const handleTyping = () => {
+		if (!isTyping) {
+			setIsTyping(true);
+		}
+	};
+
+	const emitTyping = () => {
+		sendTyping(chatId, user);
+	};
+
+	useEffect(() => {
 		if (!user || !chatId) return;
 		initiateSocket(user, chatId);
 		subscribeToChat(
@@ -102,7 +126,8 @@ export function Chat() {
 				}
 			},
 			() => setIsOnline(false),
-			() => setIsOnline(true)
+			() => setIsOnline(true),
+			handleTyping
 		);
 		if (user === "uldana") setRecipient("daulet");
 		else setRecipient("uldana");
@@ -117,7 +142,7 @@ export function Chat() {
 		<>
 			<div className="flex flex-col h-screen">
 				<header className="bg-gray-900 text-white py-4 px-6 flex items-center justify-between">
-					<div className="flex gap-2">
+					<div className="flex gap-2 items-center">
 						{user ? (
 							<>
 								<h1 className="text-xl font-bold">
@@ -130,6 +155,12 @@ export function Chat() {
 										<OfflineIcon className="w-6 h-6" />
 									)}
 								</div>
+								{/* add typing indicator */}
+								{isTyping && (
+									<p className="text-sm text-gray-300">
+										{recipient} is typing...
+									</p>
+								)}
 							</>
 						) : (
 							<h1 className="text-xl font-bold">Please log in</h1>
@@ -269,6 +300,7 @@ export function Chat() {
 						value={message}
 						onChange={(e) => {
 							setMessage(e.target.value);
+							emitTyping();
 						}}
 						onKeyDown={handleKeyPress}
 					/>
